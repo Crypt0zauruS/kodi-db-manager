@@ -16,6 +16,7 @@ export default function ManagementPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
 
   const [newShare, setNewShare] = useState<Partial<SmbShare>>({
     id: '',
@@ -298,36 +299,61 @@ export default function ManagementPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">{t('management.smb.username')}</label>
-                    <input
-                      type="text"
-                      value={newShare.username}
-                      onChange={(e) => setNewShare({ ...newShare, username: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">{t('management.smb.password')}</label>
-                    <input
-                      type="password"
-                      value={newShare.password}
-                      onChange={(e) => setNewShare({ ...newShare, password: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
+                {/* Guest Mode Checkbox */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="guestMode"
+                    checked={isGuest}
+                    onChange={(e) => {
+                      setIsGuest(e.target.checked);
+                      if (e.target.checked) {
+                        setNewShare({ ...newShare, username: 'guest', password: '' });
+                      } else {
+                        setNewShare({ ...newShare, username: '', password: '' });
+                      }
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="guestMode" className="text-sm font-medium">
+                    {t('management.smb.guestMode')}
+                  </label>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">{t('management.smb.domain')}</label>
-                  <input
-                    type="text"
-                    value={newShare.domain}
-                    onChange={(e) => setNewShare({ ...newShare, domain: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
+                {!isGuest && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">{t('management.smb.username')}</label>
+                        <input
+                          type="text"
+                          value={newShare.username}
+                          onChange={(e) => setNewShare({ ...newShare, username: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">{t('management.smb.password')}</label>
+                        <input
+                          type="password"
+                          value={newShare.password}
+                          onChange={(e) => setNewShare({ ...newShare, password: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('management.smb.domain')}</label>
+                      <input
+                        type="text"
+                        value={newShare.domain}
+                        onChange={(e) => setNewShare({ ...newShare, domain: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div className="flex gap-2 justify-end">
                   <button

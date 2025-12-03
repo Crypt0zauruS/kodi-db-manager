@@ -21,16 +21,33 @@ export default function HomePage() {
   }, []);
 
   async function checkConnection() {
-    try {
-      setCheckingConnection(true);
-      await testDatabaseConnection();
-      setIsConnected(true);
-      loadMovies();
-    } catch (err) {
-      setIsConnected(false);
-      setLoading(false);
-    } finally {
-      setCheckingConnection(false);
+    const maxRetries = 3;
+    let attempt = 0;
+
+    setCheckingConnection(true);
+
+    while (attempt < maxRetries) {
+      try {
+        await testDatabaseConnection();
+        setIsConnected(true);
+        setCheckingConnection(false);
+        loadMovies();
+        return; // Success, exit
+      } catch (err) {
+        attempt++;
+        console.log(`Connection attempt ${attempt} failed`);
+
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+        } else {
+          // All retries failed
+          console.error('All connection attempts failed:', err);
+          setIsConnected(false);
+          setLoading(false);
+          setCheckingConnection(false);
+        }
+      }
     }
   }
 

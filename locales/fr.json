@@ -69,7 +69,9 @@
       "testConnection": "Tester la Connexion",
       "testing": "Test en cours...",
       "connected": "Connexion réussie",
-      "failed": "Connexion échouée"
+      "failed": "Connexion échouée",
+      "guestMode": "Mode Invité (sans authentification)",
+      "noCredentials": "Invité"
     }
   }
 }

@@ -30,20 +30,134 @@ pub async fn detect_smb_shares() -> Result<Vec<SmbShare>> {
     // Get local IP to determine network
     let local_ip = local_ip().map_err(|e| anyhow!("Failed to get local IP: {}", e))?;
 
-    // Get network hosts
-    let hosts = scan_network_hosts(&local_ip.to_string()).await?;
+    // Detect OS and use appropriate method
+    if cfg!(target_os = "macos") {
+        // macOS: use dns-sd for mDNS/Bonjour discovery
+        shares = scan_macos_network().await?;
+    } else {
+        // Linux: use nmblookup/smbclient
+        let hosts = scan_network_hosts(&local_ip.to_string()).await?;
 
-    // For each host, try to list shares
-    for host in hosts {
-        if let Ok(host_shares) = list_host_shares(&host.ip, &host.name).await {
-            shares.extend(host_shares);
+        // For each host, try to list shares
+        for host in hosts {
+            if let Ok(host_shares) = list_host_shares(&host.ip, &host.name).await {
+                shares.extend(host_shares);
+            }
         }
     }
 
     Ok(shares)
 }
 
-/// Scan network for SMB/NetBIOS hosts using nmblookup
+/// Scan macOS network using dns-sd (Bonjour/mDNS)
+async fn scan_macos_network() -> Result<Vec<SmbShare>> {
+    let mut shares = Vec::new();
+
+    // Use dns-sd to discover SMB services
+    // dns-sd -B _smb._tcp will browse for SMB services
+    let output = Command::new("dns-sd")
+        .args(&["-B", "_smb._tcp", "local.", "-t", "5"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn();
+
+    if let Ok(mut child) = output {
+        // Wait for discovery with timeout
+        let timeout_duration = std::time::Duration::from_secs(5);
+        if let Ok(Ok(output)) = tokio::time::timeout(timeout_duration, child.wait_with_output()).await
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            // Parse dns-sd output
+            for line in stdout.lines() {
+                if line.contains("Add") && line.contains("_smb._tcp") {
+                    // Extract hostname from dns-sd output
+                    if let Some(hostname) = parse_dns_sd_line(line) {
+                        // Try to resolve and get shares
+                        if let Ok(host_shares) = get_macos_shares(&hostname).await {
+                            shares.extend(host_shares);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: scan common local hosts
+    if shares.is_empty() {
+        shares = scan_common_hosts_macos().await?;
+    }
+
+    Ok(shares)
+}
+
+/// Parse dns-sd output line to extract hostname
+fn parse_dns_sd_line(line: &str) -> Option<String> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() > 6 {
+        Some(parts[6].trim_end_matches('.').to_string())
+    } else {
+        None
+    }
+}
+
+/// Get shares from a macOS host using smbutil
+async fn get_macos_shares(hostname: &str) -> Result<Vec<SmbShare>> {
+    let mut shares = Vec::new();
+
+    // Use smbutil to list shares (guest access)
+    let output = Command::new("smbutil")
+        .args(&["view", "-g", &format!("//{}", hostname)])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+        .await;
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            for line in stdout.lines() {
+                // smbutil output format: "Share\t\tDisk\tComment"
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 && parts[1].contains("Disk") {
+                    let share_name = parts[0].to_string();
+
+                    // Skip administrative shares
+                    if !share_name.ends_with('$') && share_name != "IPC" {
+                        shares.push(SmbShare {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            host: hostname.to_string(),
+                            share: share_name,
+                            username: None,
+                            password: None,
+                            domain: None,
+                            ip_address: hostname.to_string(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(shares)
+}
+
+/// Scan common local hosts on macOS (fallback)
+async fn scan_common_hosts_macos() -> Result<Vec<SmbShare>> {
+    let mut all_shares = Vec::new();
+    let common_names = vec!["localhost", "nas", "server", "timecapsule"];
+
+    for name in common_names {
+        if let Ok(shares) = get_macos_shares(name).await {
+            all_shares.extend(shares);
+        }
+    }
+
+    Ok(all_shares)
+}
+
+/// Scan network for SMB/NetBIOS hosts using nmblookup (Linux)
 async fn scan_network_hosts(local_ip: &str) -> Result<Vec<SmbHost>> {
     let mut hosts = Vec::new();
 
@@ -222,17 +336,69 @@ pub async fn test_smb_connection(
     password: Option<&str>,
     domain: Option<&str>,
 ) -> Result<bool> {
-    let mut args = vec![format!("//{}/{}", host, share)];
+    if cfg!(target_os = "macos") {
+        test_smb_connection_macos(host, share, username, password, domain).await
+    } else {
+        test_smb_connection_linux(host, share, username, password, domain).await
+    }
+}
 
-    if let Some(user) = username {
-        args.push("-U".to_string());
-        if let Some(dom) = domain {
-            args.push(format!("{}/{}", dom, user));
+/// Test SMB connection on macOS using smbutil
+async fn test_smb_connection_macos(
+    host: &str,
+    share: &str,
+    username: Option<&str>,
+    password: Option<&str>,
+    _domain: Option<&str>,
+) -> Result<bool> {
+    let smb_url = if let Some(user) = username {
+        if let Some(pass) = password {
+            format!("smb://{}:{}@{}/{}", user, pass, host, share)
         } else {
-            args.push(user.to_string());
+            format!("smb://{}@{}/{}", user, host, share)
         }
     } else {
-        args.push("-N".to_string()); // No password
+        // Guest mode
+        format!("smb://guest@{}/{}", host, share)
+    };
+
+    // Try to stat the share (lightweight test)
+    let output = Command::new("smbutil")
+        .args(&["statshares", &smb_url])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .await?;
+
+    Ok(output.status.success())
+}
+
+/// Test SMB connection on Linux using smbclient
+async fn test_smb_connection_linux(
+    host: &str,
+    share: &str,
+    username: Option<&str>,
+    password: Option<&str>,
+    domain: Option<&str>,
+) -> Result<bool> {
+    let mut args = vec![format!("//{}/{}", host, share)];
+
+    // Handle guest mode vs authenticated
+    if let Some(user) = username {
+        if !user.is_empty() && user.to_lowercase() != "guest" {
+            args.push("-U".to_string());
+            if let Some(dom) = domain {
+                args.push(format!("{}/{}", dom, user));
+            } else {
+                args.push(user.to_string());
+            }
+        } else {
+            // Guest mode
+            args.push("-N".to_string());
+        }
+    } else {
+        // No username = guest mode
+        args.push("-N".to_string());
     }
 
     args.push("-c".to_string());
@@ -241,23 +407,25 @@ pub async fn test_smb_connection(
     let mut cmd = Command::new("smbclient");
     cmd.args(&args).stdout(Stdio::null()).stderr(Stdio::null());
 
-    // If password provided, pass via stdin
+    // If password provided and not guest, pass via stdin
     if let Some(pass) = password {
-        cmd.stdin(Stdio::piped());
-        let mut child = cmd.spawn()?;
+        if !pass.is_empty() {
+            cmd.stdin(Stdio::piped());
+            let mut child = cmd.spawn()?;
 
-        if let Some(mut stdin) = child.stdin.take() {
-            use tokio::io::AsyncWriteExt;
-            let _ = stdin.write_all(pass.as_bytes()).await;
-            let _ = stdin.write_all(b"\n").await;
+            if let Some(mut stdin) = child.stdin.take() {
+                use tokio::io::AsyncWriteExt;
+                let _ = stdin.write_all(pass.as_bytes()).await;
+                let _ = stdin.write_all(b"\n").await;
+            }
+
+            let output = child.wait().await?;
+            return Ok(output.success());
         }
-
-        let output = child.wait().await?;
-        Ok(output.success())
-    } else {
-        let output = cmd.output().await?;
-        Ok(output.status.success())
     }
+
+    let output = cmd.output().await?;
+    Ok(output.status.success())
 }
 
 /// Mount SMB share (requires root/sudo or fuse)

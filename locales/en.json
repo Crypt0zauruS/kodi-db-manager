@@ -69,7 +69,9 @@
       "testConnection": "Test Connection",
       "testing": "Testing...",
       "connected": "Connection successful",
-      "failed": "Connection failed"
+      "failed": "Connection failed",
+      "guestMode": "Guest Mode (no authentication)",
+      "noCredentials": "Guest"
     }
   }
 }
