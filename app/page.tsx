@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getMovies, type Movie } from './lib/tauri';
+import { getMovies, testDatabaseConnection, type Movie } from './lib/tauri';
 import { MovieCard } from './components/MovieCard';
+import { DatabaseConfigForm } from './components/DatabaseConfig';
 import { Search, Film, Loader2 } from 'lucide-react';
 
 export default function HomePage() {
@@ -10,10 +11,26 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [checkingConnection, setCheckingConnection] = useState(true);
 
   useEffect(() => {
-    loadMovies();
+    checkConnection();
   }, []);
+
+  async function checkConnection() {
+    try {
+      setCheckingConnection(true);
+      await testDatabaseConnection();
+      setIsConnected(true);
+      loadMovies();
+    } catch (err) {
+      setIsConnected(false);
+      setLoading(false);
+    } finally {
+      setCheckingConnection(false);
+    }
+  }
 
   async function loadMovies() {
     try {
@@ -27,6 +44,26 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleConnected() {
+    setIsConnected(true);
+    loadMovies();
+  }
+
+  if (checkingConnection) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="text-lg">Checking connection...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return <DatabaseConfigForm onConnected={handleConnected} />;
   }
 
   const filteredMovies = movies.filter((movie) =>

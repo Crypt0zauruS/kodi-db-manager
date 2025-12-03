@@ -2,36 +2,23 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Movie {
+    #[sqlx(rename = "idMovie")]
     #[serde(rename = "idMovie")]
     pub id_movie: i32,
-    #[serde(rename = "c00")]
-    pub title: String,
-    #[serde(rename = "c01")]
-    pub plot: Option<String>,
-    #[serde(rename = "c05")]
-    pub rating: Option<f32>,
-    #[serde(rename = "c07")]
-    pub year: Option<String>,
-    #[serde(rename = "c08")]
-    pub thumbs: Option<String>,
-    #[serde(rename = "c12")]
-    pub mpaa: Option<String>,
-    #[serde(rename = "c14")]
-    pub genre: Option<String>,
-    #[serde(rename = "c15")]
-    pub director: Option<String>,
-    #[serde(rename = "c16")]
-    pub original_title: Option<String>,
-    #[serde(rename = "c18")]
-    pub studio: Option<String>,
-    #[serde(rename = "c19")]
-    pub trailer: Option<String>,
-    #[serde(rename = "c20")]
-    pub fanart: Option<String>,
-    #[serde(rename = "c21")]
-    pub country: Option<String>,
-    #[serde(rename = "c22")]
-    pub path: Option<String>,
+    pub c00: String,
+    pub c01: Option<String>,
+    pub c05: Option<String>,
+    pub c07: Option<String>,
+    pub c08: Option<String>,
+    pub c12: Option<String>,
+    pub c14: Option<String>,
+    pub c15: Option<String>,
+    pub c16: Option<String>,
+    pub c18: Option<String>,
+    pub c19: Option<String>,
+    pub c20: Option<String>,
+    pub c21: Option<String>,
+    pub c22: Option<String>,
     pub premiered: Option<String>,
 }
 
