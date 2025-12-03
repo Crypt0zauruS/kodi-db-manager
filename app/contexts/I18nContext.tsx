@@ -21,6 +21,9 @@ const translations: Translations = {
     'common.close': 'Close',
     'common.connect': 'Connect',
     'common.retry': 'Retry',
+
+    // Header
+    'header.subtitle': 'Manage your Kodi media library with ease',
     
     // Movies
     'movies.title': 'Movies',
@@ -61,6 +64,9 @@ const translations: Translations = {
     'common.close': 'Fermer',
     'common.connect': 'Connecter',
     'common.retry': 'Réessayer',
+
+    // Header
+    'header.subtitle': 'Gérez votre bibliothèque Kodi en toute simplicité',
     
     // Movies
     'movies.title': 'Films',

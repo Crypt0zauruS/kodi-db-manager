@@ -1,16 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { getMovies, testDatabaseConnection, type Movie } from './lib/tauri';
 import { MovieCard } from './components/MovieCard';
 import { DatabaseConnection } from './components/DatabaseConnection';
-import { Search, Film, Loader2, Settings } from 'lucide-react';
+import { Search, Film, Loader2 } from 'lucide-react';
 import { useI18n } from './contexts/I18nContext';
 
 export default function HomePage() {
   const { t } = useI18n();
-  const router = useRouter();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,24 +74,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Film className="w-8 h-8 text-primary" />
-              <h1 className="text-3xl font-bold">Kodi Database Manager</h1>
-            </div>
-            <button
-              onClick={() => router.push('/settings')}
-              className="p-2 hover:bg-accent rounded-lg transition-colors"
-              title={t('settings.title')}
-            >
-              <Settings className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div className="border-b bg-card/50">
         <div className="container mx-auto px-4 py-4">
           <div className="relative max-w-md">

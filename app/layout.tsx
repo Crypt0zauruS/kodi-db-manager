@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { I18nProvider } from "./contexts/I18nContext";
+import { Header } from "./components/Header";
 
 export const metadata: Metadata = {
   title: "Kodi Database Manager",
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <I18nProvider>
+          <Header />
           {children}
         </I18nProvider>
       </body>
