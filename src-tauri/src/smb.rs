@@ -61,7 +61,7 @@ async fn scan_macos_network() -> Result<Vec<SmbShare>> {
         .stderr(Stdio::null())
         .spawn();
 
-    if let Ok(mut child) = output {
+    if let Ok(child) = output {
         // Wait for discovery with timeout
         let timeout_duration = std::time::Duration::from_secs(5);
         if let Ok(Ok(output)) = tokio::time::timeout(timeout_duration, child.wait_with_output()).await
@@ -182,7 +182,8 @@ async fn scan_common_hosts_macos() -> Result<Vec<SmbShare>> {
 
     // Also scan common IP ranges in local network
     if let Ok(local_ip) = local_ip() {
-        let ip_parts: Vec<&str> = local_ip.to_string().split('.').collect();
+        let ip_string = local_ip.to_string();
+        let ip_parts: Vec<&str> = ip_string.split('.').collect();
         if ip_parts.len() == 4 {
             let network_prefix = format!("{}.{}.{}", ip_parts[0], ip_parts[1], ip_parts[2]);
 
