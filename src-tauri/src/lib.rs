@@ -3,6 +3,7 @@ mod config;
 mod database;
 mod models;
 mod tmdb;
+mod smb;
 
 use config::AppState;
 
@@ -31,6 +32,9 @@ pub fn run() {
       commands::test_database_connection,
       commands::get_config,
       commands::update_config,
+      commands::detect_smb_shares,
+      commands::test_smb_connection,
+      commands::mount_smb_share,
       tmdb::tmdb_search_movie,
       tmdb::tmdb_get_movie_details,
     ])

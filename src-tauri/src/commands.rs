@@ -1,6 +1,7 @@
 use crate::config::AppState;
 use crate::database;
 use crate::models::{AppConfig, DatabaseConfig, Movie};
+use crate::smb::{self, SmbShare};
 use tauri::State;
 
 #[tauri::command]
@@ -88,4 +89,53 @@ pub async fn update_config(config: AppConfig, state: State<'_, AppState>) -> Res
     let mut config_guard = state.config.lock().await;
     *config_guard = config;
     Ok(())
+}
+
+// ========== SMB Commands ==========
+
+#[tauri::command]
+pub async fn detect_smb_shares() -> Result<Vec<SmbShare>, String> {
+    smb::detect_smb_shares()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn test_smb_connection(
+    host: String,
+    share: String,
+    username: Option<String>,
+    password: Option<String>,
+    domain: Option<String>,
+) -> Result<bool, String> {
+    smb::test_smb_connection(
+        &host,
+        &share,
+        username.as_deref(),
+        password.as_deref(),
+        domain.as_deref(),
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn mount_smb_share(
+    host: String,
+    share: String,
+    mount_point: String,
+    username: Option<String>,
+    password: Option<String>,
+    domain: Option<String>,
+) -> Result<(), String> {
+    smb::mount_smb_share(
+        &host,
+        &share,
+        &mount_point,
+        username.as_deref(),
+        password.as_deref(),
+        domain.as_deref(),
+    )
+    .await
+    .map_err(|e| e.to_string())
 }

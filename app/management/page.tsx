@@ -5,15 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useI18n } from '../contexts/I18nContext';
 import { ArrowLeft, Network, Loader2, Plus, Save, Check, X, HardDrive } from 'lucide-react';
 import { Store } from '@tauri-apps/plugin-store';
-
-interface SmbShare {
-  id: string;
-  host: string;
-  share: string;
-  username: string;
-  password: string;
-  domain?: string;
-}
+import type { SmbShare } from '../lib/tauri';
 
 export default function ManagementPage() {
   const { t } = useI18n();
@@ -25,13 +17,14 @@ export default function ManagementPage() {
   const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
 
-  const [newShare, setNewShare] = useState<SmbShare>({
+  const [newShare, setNewShare] = useState<Partial<SmbShare>>({
     id: '',
     host: '',
     share: '',
     username: '',
     password: '',
     domain: '',
+    ip_address: '',
   });
 
   // Load saved shares on mount
@@ -54,29 +47,9 @@ export default function ManagementPage() {
   async function detectShares() {
     setDetecting(true);
     try {
-      // TODO: Call Tauri command to detect SMB shares on network
-      // For now, simulate detection
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Mock detected shares
-      const mockShares: SmbShare[] = [
-        {
-          id: crypto.randomUUID(),
-          host: '192.168.1.10',
-          share: 'Movies',
-          username: '',
-          password: '',
-        },
-        {
-          id: crypto.randomUUID(),
-          host: '192.168.1.10',
-          share: 'TV Shows',
-          username: '',
-          password: '',
-        },
-      ];
-
-      setDetectedShares(mockShares);
+      const { detectSmbShares } = await import('../lib/tauri');
+      const shares = await detectSmbShares();
+      setDetectedShares(shares);
     } catch (err) {
       console.error('Detection failed:', err);
     } finally {
@@ -85,9 +58,14 @@ export default function ManagementPage() {
   }
 
   async function handleAddShare() {
-    const share = {
-      ...newShare,
+    const share: SmbShare = {
       id: crypto.randomUUID(),
+      host: newShare.host || '',
+      share: newShare.share || '',
+      username: newShare.username,
+      password: newShare.password,
+      domain: newShare.domain,
+      ip_address: newShare.ip_address || newShare.host || '',
     };
 
     const updatedShares = [...savedShares, share];
@@ -110,6 +88,7 @@ export default function ManagementPage() {
       username: '',
       password: '',
       domain: '',
+      ip_address: '',
     });
     setShowAddForm(false);
   }
@@ -146,11 +125,26 @@ export default function ManagementPage() {
   async function handleTestConnection(id: string) {
     setTestingId(id);
     try {
-      // TODO: Call Tauri command to test SMB connection
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // Mock success
+      const share = savedShares.find(s => s.id === id);
+      if (!share) return;
+
+      const { testSmbConnection } = await import('../lib/tauri');
+      const result = await testSmbConnection(
+        share.host,
+        share.share,
+        share.username,
+        share.password,
+        share.domain
+      );
+
+      if (result) {
+        alert(t('management.smb.connected'));
+      } else {
+        alert(t('management.smb.failed'));
+      }
     } catch (err) {
       console.error('Test failed:', err);
+      alert(t('management.smb.failed'));
     } finally {
       setTestingId(null);
     }

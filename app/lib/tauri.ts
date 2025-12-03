@@ -116,3 +116,53 @@ export async function tmdbGetMovieDetails(
 export function getTmdbImageUrl(path: string, size: string = 'w500'): string {
   return `https://image.tmdb.org/t/p/${size}${path}`;
 }
+
+// SMB Interfaces
+export interface SmbShare {
+  id: string;
+  host: string;
+  share: string;
+  username?: string;
+  password?: string;
+  domain?: string;
+  ip_address: string;
+}
+
+// SMB commands
+export async function detectSmbShares(): Promise<SmbShare[]> {
+  return await invoke<SmbShare[]>('detect_smb_shares');
+}
+
+export async function testSmbConnection(
+  host: string,
+  share: string,
+  username?: string,
+  password?: string,
+  domain?: string
+): Promise<boolean> {
+  return await invoke<boolean>('test_smb_connection', {
+    host,
+    share,
+    username,
+    password,
+    domain,
+  });
+}
+
+export async function mountSmbShare(
+  host: string,
+  share: string,
+  mountPoint: string,
+  username?: string,
+  password?: string,
+  domain?: string
+): Promise<void> {
+  return await invoke('mount_smb_share', {
+    host,
+    share,
+    mountPoint,
+    username,
+    password,
+    domain,
+  });
+}
