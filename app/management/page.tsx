@@ -48,12 +48,23 @@ export default function ManagementPage() {
 
   async function detectShares() {
     setDetecting(true);
+    setDetectedShares([]); // Clear previous results
+
     try {
-      const { detectSmbShares } = await import('../lib/tauri');
-      const shares = await detectSmbShares();
+      // Add 60-second timeout to prevent infinite loading
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Detection timeout after 60 seconds')), 60000);
+      });
+
+      const detectionPromise = import('../lib/tauri').then(({ detectSmbShares }) =>
+        detectSmbShares()
+      );
+
+      const shares = await Promise.race([detectionPromise, timeoutPromise]);
       setDetectedShares(shares);
     } catch (err) {
       console.error('Detection failed:', err);
+      setDetectedShares([]); // Ensure empty on error
     } finally {
       setDetecting(false);
     }

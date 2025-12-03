@@ -53,40 +53,70 @@ pub async fn detect_smb_shares() -> Result<Vec<SmbShare>> {
 async fn scan_macos_network() -> Result<Vec<SmbShare>> {
     let mut shares = Vec::new();
 
-    // Use dns-sd to discover SMB services
-    // dns-sd -B _smb._tcp will browse for SMB services
-    let output = Command::new("dns-sd")
-        .args(&["-B", "_smb._tcp", "local.", "-t", "5"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn();
+    // Try multiple detection methods in parallel for robustness
 
-    if let Ok(child) = output {
-        // Wait for discovery with timeout
-        let timeout_duration = std::time::Duration::from_secs(5);
-        if let Ok(Ok(output)) = tokio::time::timeout(timeout_duration, child.wait_with_output()).await
+    // Method 1: dns-sd (Bonjour/mDNS)
+    let dns_sd_handle = tokio::spawn(async {
+        let mut discovered_shares = Vec::new();
+
+        if let Ok(child) = Command::new("dns-sd")
+            .args(&["-B", "_smb._tcp", "local.", "-t", "5"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
         {
-            let stdout = String::from_utf8_lossy(&output.stdout);
+            let timeout_duration = std::time::Duration::from_secs(5);
+            if let Ok(Ok(output)) = tokio::time::timeout(timeout_duration, child.wait_with_output()).await
+            {
+                let stdout = String::from_utf8_lossy(&output.stdout);
 
-            // Parse dns-sd output
-            for line in stdout.lines() {
-                if line.contains("Add") && line.contains("_smb._tcp") {
-                    // Extract hostname from dns-sd output
-                    if let Some(hostname) = parse_dns_sd_line(line) {
-                        // Try to resolve and get shares
-                        if let Ok(host_shares) = get_macos_shares(&hostname).await {
-                            shares.extend(host_shares);
+                for line in stdout.lines() {
+                    if line.contains("Add") && line.contains("_smb._tcp") {
+                        if let Some(hostname) = parse_dns_sd_line(line) {
+                            if let Ok(host_shares) = get_macos_shares(&hostname).await {
+                                discovered_shares.extend(host_shares);
+                            }
                         }
                     }
                 }
             }
         }
+
+        discovered_shares
+    });
+
+    // Method 2: Try nmblookup if available (NetBIOS)
+    let netbios_handle = tokio::spawn(async {
+        scan_netbios_macos().await.unwrap_or_default()
+    });
+
+    // Method 3: Direct IP scanning
+    let ip_scan_handle = tokio::spawn(async {
+        scan_common_hosts_macos().await.unwrap_or_default()
+    });
+
+    // Collect results from all methods
+    if let Ok(dns_shares) = dns_sd_handle.await {
+        shares.extend(dns_shares);
     }
 
-    // Fallback: scan common local hosts
-    if shares.is_empty() {
-        shares = scan_common_hosts_macos().await?;
+    if let Ok(netbios_shares) = netbios_handle.await {
+        shares.extend(netbios_shares);
     }
+
+    if let Ok(ip_shares) = ip_scan_handle.await {
+        shares.extend(ip_shares);
+    }
+
+    // Deduplicate shares by host+share combination
+    shares.sort_by(|a, b| {
+        let key_a = format!("{}:{}", a.host, a.share);
+        let key_b = format!("{}:{}", b.host, b.share);
+        key_a.cmp(&key_b)
+    });
+    shares.dedup_by(|a, b| {
+        a.host == b.host && a.share == b.share
+    });
 
     Ok(shares)
 }
@@ -116,12 +146,12 @@ async fn get_macos_shares(hostname: &str) -> Result<Vec<SmbShare>> {
     if let Ok(output) = output {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            println!("smbutil output for {}: {}", hostname, stdout);
 
             // Try different parsing strategies
             for line in stdout.lines() {
                 let line = line.trim();
-                if line.is_empty() || line.starts_with("Share") {
+                // Skip empty lines, headers, and separator lines (like "------")
+                if line.is_empty() || line.starts_with("Share") || line.chars().all(|c| c == '-' || c.is_whitespace()) {
                     continue;
                 }
 
@@ -147,7 +177,6 @@ async fn get_macos_shares(hostname: &str) -> Result<Vec<SmbShare>> {
                 let is_disk = parts.len() < 2 || parts.iter().any(|p| p.contains("Disk"));
 
                 if is_disk {
-                    println!("Found share: {} on {}", share_name, hostname);
                     shares.push(SmbShare {
                         id: uuid::Uuid::new_v4().to_string(),
                         host: hostname.to_string(),
@@ -159,9 +188,6 @@ async fn get_macos_shares(hostname: &str) -> Result<Vec<SmbShare>> {
                     });
                 }
             }
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            println!("smbutil failed for {}: {}", hostname, stderr);
         }
     }
 
@@ -172,33 +198,116 @@ async fn get_macos_shares(hostname: &str) -> Result<Vec<SmbShare>> {
 async fn scan_common_hosts_macos() -> Result<Vec<SmbShare>> {
     let mut all_shares = Vec::new();
 
-    // Try common hostnames
-    let common_names = vec!["localhost", "nas", "server", "timecapsule"];
+    // Try common hostnames in parallel
+    let common_names = vec!["nas", "server", "timecapsule", "storage"];
+    let mut hostname_tasks = Vec::new();
+
     for name in common_names {
-        if let Ok(shares) = get_macos_shares(name).await {
-            all_shares.extend(shares);
-        }
+        let name = name.to_string();
+        hostname_tasks.push(tokio::spawn(async move {
+            get_macos_shares(&name).await.unwrap_or_default()
+        }));
     }
 
-    // Also scan common IP ranges in local network
+    // Scan broader IP range in local network with parallel execution
     if let Ok(local_ip) = local_ip() {
         let ip_string = local_ip.to_string();
         let ip_parts: Vec<&str> = ip_string.split('.').collect();
         if ip_parts.len() == 4 {
             let network_prefix = format!("{}.{}.{}", ip_parts[0], ip_parts[1], ip_parts[2]);
 
-            // Scan common IPs: .1, .10, .100, .254
-            let common_ips = vec![1, 10, 100, 254];
-            for ip_suffix in common_ips {
+            // Expanded IP range: common router/NAS IPs plus a broader scan
+            let scan_ips = vec![
+                1, 2, 3, 5, 10, 11, 20, 50, 100, 101, 150, 200, 254
+            ];
+
+            let mut ip_tasks = Vec::new();
+
+            for ip_suffix in scan_ips {
                 let ip = format!("{}.{}", network_prefix, ip_suffix);
-                if let Ok(shares) = get_macos_shares(&ip).await {
+                ip_tasks.push(tokio::spawn(async move {
+                    // First check if SMB port is open before trying smbutil
+                    if check_smb_port(&ip).await {
+                        get_macos_shares(&ip).await.unwrap_or_default()
+                    } else {
+                        Vec::new()
+                    }
+                }));
+            }
+
+            // Collect IP scan results
+            for task in ip_tasks {
+                if let Ok(shares) = task.await {
                     all_shares.extend(shares);
                 }
             }
         }
     }
 
+    // Collect hostname scan results
+    for task in hostname_tasks {
+        if let Ok(shares) = task.await {
+            all_shares.extend(shares);
+        }
+    }
+
     Ok(all_shares)
+}
+
+/// Scan network using NetBIOS on macOS (if nmblookup available)
+async fn scan_netbios_macos() -> Result<Vec<SmbShare>> {
+    let mut all_shares = Vec::new();
+
+    // Check if nmblookup is available
+    let check_nmblookup = Command::new("which")
+        .arg("nmblookup")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .await;
+
+    if check_nmblookup.is_ok() && check_nmblookup.unwrap().success() {
+        // nmblookup is available, try to scan for workgroups
+        let output = Command::new("nmblookup")
+            .args(&["-M", "--", "-"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .output()
+            .await;
+
+        if let Ok(output) = output {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+
+                // Parse nmblookup output for IPs
+                for line in stdout.lines() {
+                    if let Some(ip) = extract_ip_from_line(line) {
+                        if let Ok(shares) = get_macos_shares(&ip).await {
+                            all_shares.extend(shares);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(all_shares)
+}
+
+/// Extract IP address from nmblookup output line
+fn extract_ip_from_line(line: &str) -> Option<String> {
+    // nmblookup output format: "name<00> IP_ADDRESS"
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    for part in parts {
+        // Check if it looks like an IP address
+        if part.matches('.').count() == 3 {
+            let octets: Vec<&str> = part.split('.').collect();
+            if octets.len() == 4 && octets.iter().all(|s| s.parse::<u8>().is_ok()) {
+                return Some(part.to_string());
+            }
+        }
+    }
+    None
 }
 
 /// Scan network for SMB/NetBIOS hosts using nmblookup (Linux)
