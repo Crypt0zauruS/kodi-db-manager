@@ -17,6 +17,7 @@ export default function ManagementPage() {
   const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState(false);
+  const [testResult, setTestResult] = useState<{id: string, success: boolean} | null>(null);
 
   const [newShare, setNewShare] = useState<Partial<SmbShare>>({
     id: '',
@@ -125,6 +126,8 @@ export default function ManagementPage() {
 
   async function handleTestConnection(id: string) {
     setTestingId(id);
+    setTestResult(null); // Clear previous result
+
     try {
       const share = savedShares.find(s => s.id === id);
       if (!share) return;
@@ -138,14 +141,20 @@ export default function ManagementPage() {
         share.domain
       );
 
-      if (result) {
-        alert(t('management.smb.connected'));
-      } else {
-        alert(t('management.smb.failed'));
-      }
+      setTestResult({ id, success: result });
+
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        setTestResult(null);
+      }, 3000);
     } catch (err) {
       console.error('Test failed:', err);
-      alert(t('management.smb.failed'));
+      setTestResult({ id, success: false });
+
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        setTestResult(null);
+      }, 3000);
     } finally {
       setTestingId(null);
     }
@@ -235,14 +244,28 @@ export default function ManagementPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      {/* Test Result Visual Feedback */}
+                      {testResult && testResult.id === share.id && (
+                        <div className={`px-3 py-1.5 rounded text-sm font-medium ${
+                          testResult.success
+                            ? 'bg-green-100 text-green-700 border border-green-300'
+                            : 'bg-red-100 text-red-700 border border-red-300'
+                        }`}>
+                          {testResult.success ? '✓ ' + t('management.smb.connected') : '✗ ' + t('management.smb.failed')}
+                        </div>
+                      )}
+
                       <button
                         onClick={() => handleTestConnection(share.id)}
                         disabled={testingId === share.id}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                       >
                         {testingId === share.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            {t('management.smb.testing')}
+                          </>
                         ) : (
                           t('management.smb.testConnection')
                         )}

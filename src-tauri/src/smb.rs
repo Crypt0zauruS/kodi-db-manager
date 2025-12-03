@@ -109,34 +109,59 @@ async fn get_macos_shares(hostname: &str) -> Result<Vec<SmbShare>> {
     let output = Command::new("smbutil")
         .args(&["view", "-g", &format!("//{}", hostname)])
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .output()
         .await;
 
     if let Ok(output) = output {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
+            println!("smbutil output for {}: {}", hostname, stdout);
 
+            // Try different parsing strategies
             for line in stdout.lines() {
-                // smbutil output format: "Share\t\tDisk\tComment"
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 && parts[1].contains("Disk") {
-                    let share_name = parts[0].to_string();
+                let line = line.trim();
+                if line.is_empty() || line.starts_with("Share") {
+                    continue;
+                }
 
-                    // Skip administrative shares
-                    if !share_name.ends_with('$') && share_name != "IPC" {
-                        shares.push(SmbShare {
-                            id: uuid::Uuid::new_v4().to_string(),
-                            host: hostname.to_string(),
-                            share: share_name,
-                            username: None,
-                            password: None,
-                            domain: None,
-                            ip_address: hostname.to_string(),
-                        });
-                    }
+                // Parse tab-separated or whitespace-separated
+                let parts: Vec<&str> = if line.contains('\t') {
+                    line.split('\t').filter(|s| !s.is_empty()).collect()
+                } else {
+                    line.split_whitespace().collect()
+                };
+
+                if parts.is_empty() {
+                    continue;
+                }
+
+                let share_name = parts[0].to_string();
+
+                // Skip administrative shares and IPC
+                if share_name.ends_with('$') || share_name.eq_ignore_ascii_case("IPC") {
+                    continue;
+                }
+
+                // Check if it's a disk share (either "Disk" keyword or just assume it's valid)
+                let is_disk = parts.len() < 2 || parts.iter().any(|p| p.contains("Disk"));
+
+                if is_disk {
+                    println!("Found share: {} on {}", share_name, hostname);
+                    shares.push(SmbShare {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        host: hostname.to_string(),
+                        share: share_name,
+                        username: None,
+                        password: None,
+                        domain: None,
+                        ip_address: hostname.to_string(),
+                    });
                 }
             }
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            println!("smbutil failed for {}: {}", hostname, stderr);
         }
     }
 
@@ -146,11 +171,29 @@ async fn get_macos_shares(hostname: &str) -> Result<Vec<SmbShare>> {
 /// Scan common local hosts on macOS (fallback)
 async fn scan_common_hosts_macos() -> Result<Vec<SmbShare>> {
     let mut all_shares = Vec::new();
-    let common_names = vec!["localhost", "nas", "server", "timecapsule"];
 
+    // Try common hostnames
+    let common_names = vec!["localhost", "nas", "server", "timecapsule"];
     for name in common_names {
         if let Ok(shares) = get_macos_shares(name).await {
             all_shares.extend(shares);
+        }
+    }
+
+    // Also scan common IP ranges in local network
+    if let Ok(local_ip) = local_ip() {
+        let ip_parts: Vec<&str> = local_ip.to_string().split('.').collect();
+        if ip_parts.len() == 4 {
+            let network_prefix = format!("{}.{}.{}", ip_parts[0], ip_parts[1], ip_parts[2]);
+
+            // Scan common IPs: .1, .10, .100, .254
+            let common_ips = vec![1, 10, 100, 254];
+            for ip_suffix in common_ips {
+                let ip = format!("{}.{}", network_prefix, ip_suffix);
+                if let Ok(shares) = get_macos_shares(&ip).await {
+                    all_shares.extend(shares);
+                }
+            }
         }
     }
 

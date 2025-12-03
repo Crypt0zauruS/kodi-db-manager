@@ -28,14 +28,23 @@ export default function HomePage() {
 
     while (attempt < maxRetries) {
       try {
-        await testDatabaseConnection();
+        // Add 10-second timeout to prevent infinite loading
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Connection timeout')), 10000);
+        });
+
+        await Promise.race([
+          testDatabaseConnection(),
+          timeoutPromise
+        ]);
+
         setIsConnected(true);
         setCheckingConnection(false);
         loadMovies();
         return; // Success, exit
       } catch (err) {
         attempt++;
-        console.log(`Connection attempt ${attempt} failed`);
+        console.log(`Connection attempt ${attempt} failed:`, err);
 
         if (attempt < maxRetries) {
           // Wait before retrying (exponential backoff: 1s, 2s, 4s)
