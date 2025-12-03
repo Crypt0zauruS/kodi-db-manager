@@ -1,102 +1,23 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import enTranslations from '@/locales/en.json';
+import frTranslations from '@/locales/fr.json';
 
 type Locale = 'en' | 'fr';
 
+interface TranslationObject {
+  [key: string]: string | TranslationObject;
+}
+
 interface Translations {
-  [key: string]: {
-    [key: string]: string;
-  };
+  en: TranslationObject;
+  fr: TranslationObject;
 }
 
 const translations: Translations = {
-  en: {
-    // Common
-    'common.loading': 'Loading...',
-    'common.error': 'Error',
-    'common.success': 'Success',
-    'common.cancel': 'Cancel',
-    'common.save': 'Save',
-    'common.close': 'Close',
-    'common.connect': 'Connect',
-    'common.retry': 'Retry',
-
-    // Header
-    'header.subtitle': 'Manage your Kodi media library with ease',
-    
-    // Movies
-    'movies.title': 'Movies',
-    'movies.searchPlaceholder': 'Search movies...',
-    'movies.noMovies': 'No movies found',
-    'movies.count': 'movies',
-    'movies.countSingular': 'movie',
-    
-    // Database
-    'db.notConnected': 'Database not connected',
-    'db.connecting': 'Connecting...',
-    'db.connected': 'Connected successfully',
-    'db.connectionError': 'Connection failed',
-    'db.timeout': 'Connection timeout (5s)',
-    'db.title': 'Database Connection',
-    'db.host': 'Host',
-    'db.port': 'Port',
-    'db.user': 'User',
-    'db.password': 'Password',
-    'db.database': 'Database',
-    'db.rememberCredentials': 'Remember credentials',
-    
-    // Settings
-    'settings.title': 'Settings',
-    'settings.language': 'Language',
-    'settings.clearCache': 'Clear Cache',
-    'settings.cacheCleared': 'Cache cleared successfully',
-    'settings.database': 'Database Configuration',
-    'settings.tmdb': 'TMDB API Key',
-  },
-  fr: {
-    // Common
-    'common.loading': 'Chargement...',
-    'common.error': 'Erreur',
-    'common.success': 'Succès',
-    'common.cancel': 'Annuler',
-    'common.save': 'Enregistrer',
-    'common.close': 'Fermer',
-    'common.connect': 'Connecter',
-    'common.retry': 'Réessayer',
-
-    // Header
-    'header.subtitle': 'Gérez votre bibliothèque Kodi en toute simplicité',
-    
-    // Movies
-    'movies.title': 'Films',
-    'movies.searchPlaceholder': 'Rechercher des films...',
-    'movies.noMovies': 'Aucun film trouvé',
-    'movies.count': 'films',
-    'movies.countSingular': 'film',
-    
-    // Database
-    'db.notConnected': 'Base de données non connectée',
-    'db.connecting': 'Connexion en cours...',
-    'db.connected': 'Connecté avec succès',
-    'db.connectionError': 'Échec de la connexion',
-    'db.timeout': 'Délai de connexion dépassé (5s)',
-    'db.title': 'Connexion Base de Données',
-    'db.host': 'Hôte',
-    'db.port': 'Port',
-    'db.user': 'Utilisateur',
-    'db.password': 'Mot de passe',
-    'db.database': 'Base de données',
-    'db.rememberCredentials': 'Mémoriser les identifiants',
-    
-    // Settings
-    'settings.title': 'Paramètres',
-    'settings.language': 'Langue',
-    'settings.clearCache': 'Vider le cache',
-    'settings.cacheCleared': 'Cache vidé avec succès',
-    'settings.database': 'Configuration Base de Données',
-    'settings.tmdb': 'Clé API TMDB',
-  },
+  en: enTranslations,
+  fr: frTranslations,
 };
 
 interface I18nContextType {
@@ -125,7 +46,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string): string => {
-    return translations[locale][key] || key;
+    const keys = key.split('.');
+    let value: any = translations[locale];
+
+    for (const k of keys) {
+      if (value && typeof value === 'object') {
+        value = value[k];
+      } else {
+        return key; // Return key if path not found
+      }
+    }
+
+    return typeof value === 'string' ? value : key;
   };
 
   return (

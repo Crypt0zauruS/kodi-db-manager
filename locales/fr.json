@@ -1,0 +1,75 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "close": "Fermer",
+    "connect": "Connecter",
+    "retry": "Réessayer",
+    "add": "Ajouter",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "confirm": "Confirmer"
+  },
+  "header": {
+    "subtitle": "Gérez votre bibliothèque Kodi en toute simplicité",
+    "management": "Gestion"
+  },
+  "footer": {
+    "madeBy": "Créé par Crypt0zauruS et son ami Claude",
+    "subtitle": "Découvrir la collaboration Humain/IA",
+    "rights": "Tous droits réservés"
+  },
+  "movies": {
+    "title": "Films",
+    "searchPlaceholder": "Rechercher des films...",
+    "noMovies": "Aucun film trouvé",
+    "count": "films",
+    "countSingular": "film"
+  },
+  "db": {
+    "notConnected": "Base de données non connectée",
+    "connecting": "Connexion en cours...",
+    "connected": "Connecté avec succès",
+    "connectionError": "Échec de la connexion",
+    "timeout": "Délai de connexion dépassé (5s)",
+    "title": "Connexion Base de Données",
+    "host": "Hôte",
+    "port": "Port",
+    "user": "Utilisateur",
+    "password": "Mot de passe",
+    "database": "Base de données",
+    "rememberCredentials": "Mémoriser les identifiants"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "clearCache": "Vider le cache",
+    "cacheCleared": "Cache vidé avec succès",
+    "database": "Configuration Base de Données",
+    "tmdb": "Clé API TMDB"
+  },
+  "management": {
+    "title": "Gestion des Partages Réseau",
+    "smb": {
+      "title": "Partages SMB/Samba",
+      "detecting": "Détection des partages réseau...",
+      "detected": "Partages Détectés",
+      "manual": "Ajouter un Partage Manuellement",
+      "host": "Hôte/Adresse IP",
+      "share": "Nom du Partage",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe",
+      "domain": "Domaine (optionnel)",
+      "addShare": "Ajouter le Partage",
+      "noShares": "Aucun partage détecté",
+      "saved": "Partages enregistrés",
+      "testConnection": "Tester la Connexion",
+      "testing": "Test en cours...",
+      "connected": "Connexion réussie",
+      "failed": "Connexion échouée"
+    }
+  }
+}

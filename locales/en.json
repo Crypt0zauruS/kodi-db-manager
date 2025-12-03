@@ -1,0 +1,75 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "connect": "Connect",
+    "retry": "Retry",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm"
+  },
+  "header": {
+    "subtitle": "Manage your Kodi media library with ease",
+    "management": "Management"
+  },
+  "footer": {
+    "madeBy": "Made by Crypt0zauruS and his friend Claude",
+    "subtitle": "Discovering collaboration Human/AI",
+    "rights": "All rights reserved"
+  },
+  "movies": {
+    "title": "Movies",
+    "searchPlaceholder": "Search movies...",
+    "noMovies": "No movies found",
+    "count": "movies",
+    "countSingular": "movie"
+  },
+  "db": {
+    "notConnected": "Database not connected",
+    "connecting": "Connecting...",
+    "connected": "Connected successfully",
+    "connectionError": "Connection failed",
+    "timeout": "Connection timeout (5s)",
+    "title": "Database Connection",
+    "host": "Host",
+    "port": "Port",
+    "user": "User",
+    "password": "Password",
+    "database": "Database",
+    "rememberCredentials": "Remember credentials"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "clearCache": "Clear Cache",
+    "cacheCleared": "Cache cleared successfully",
+    "database": "Database Configuration",
+    "tmdb": "TMDB API Key"
+  },
+  "management": {
+    "title": "Network Shares Management",
+    "smb": {
+      "title": "SMB/Samba Shares",
+      "detecting": "Detecting network shares...",
+      "detected": "Detected Shares",
+      "manual": "Add Share Manually",
+      "host": "Host/IP Address",
+      "share": "Share Name",
+      "username": "Username",
+      "password": "Password",
+      "domain": "Domain (optional)",
+      "addShare": "Add Share",
+      "noShares": "No shares detected",
+      "saved": "Shares saved",
+      "testConnection": "Test Connection",
+      "testing": "Testing...",
+      "connected": "Connection successful",
+      "failed": "Connection failed"
+    }
+  }
+}

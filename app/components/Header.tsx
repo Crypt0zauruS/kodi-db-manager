@@ -1,10 +1,12 @@
 'use client';
 
-import { Film, Globe } from 'lucide-react';
+import { Film, Globe, Settings } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
   const { t, locale, setLocale } = useI18n();
+  const router = useRouter();
 
   return (
     <header className="border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
@@ -20,29 +22,42 @@ export function Header() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-white/80" />
-            <div className="flex gap-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
-              <button
-                onClick={() => setLocale('en')}
-                className={`px-3 py-1.5 rounded font-medium transition-all ${
-                  locale === 'en'
-                    ? 'bg-white text-blue-600 shadow-md'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                EN
-              </button>
-              <button
-                onClick={() => setLocale('fr')}
-                className={`px-3 py-1.5 rounded font-medium transition-all ${
-                  locale === 'fr'
-                    ? 'bg-white text-blue-600 shadow-md'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                FR
-              </button>
+          <div className="flex items-center gap-4">
+            {/* Management Button */}
+            <button
+              onClick={() => router.push('/management')}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-all"
+              title={t('header.management')}
+            >
+              <Settings className="w-5 h-5" />
+              <span className="font-medium">{t('header.management')}</span>
+            </button>
+
+            {/* Language Switcher */}
+            <div className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-white/80" />
+              <div className="flex gap-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
+                <button
+                  onClick={() => setLocale('en')}
+                  className={`px-3 py-1.5 rounded font-medium transition-all ${
+                    locale === 'en'
+                      ? 'bg-white text-blue-600 shadow-md'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => setLocale('fr')}
+                  className={`px-3 py-1.5 rounded font-medium transition-all ${
+                    locale === 'fr'
+                      ? 'bg-white text-blue-600 shadow-md'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  FR
+                </button>
+              </div>
             </div>
           </div>
         </div>
