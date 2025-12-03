@@ -1,0 +1,43 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter"
+  },
+  "nav": {
+    "movies": "Movies",
+    "series": "TV Shows",
+    "sources": "Sources",
+    "settings": "Settings",
+    "backup": "Backup"
+  },
+  "movies": {
+    "title": "Movies",
+    "addMovie": "Add Movie",
+    "editMovie": "Edit Movie",
+    "deleteMovie": "Delete Movie",
+    "searchMovie": "Search Movie",
+    "noMovies": "No movies found",
+    "year": "Year",
+    "director": "Director",
+    "genre": "Genre",
+    "rating": "Rating",
+    "plot": "Plot"
+  },
+  "settings": {
+    "title": "Settings",
+    "database": "Database Configuration",
+    "tmdb": "TMDB API Configuration",
+    "language": "Language",
+    "theme": "Theme",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
+  }
+}

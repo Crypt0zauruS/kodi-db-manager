@@ -1,0 +1,43 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "search": "Rechercher",
+    "filter": "Filtrer"
+  },
+  "nav": {
+    "movies": "Films",
+    "series": "Séries",
+    "sources": "Sources",
+    "settings": "Paramètres",
+    "backup": "Sauvegarde"
+  },
+  "movies": {
+    "title": "Films",
+    "addMovie": "Ajouter un film",
+    "editMovie": "Modifier le film",
+    "deleteMovie": "Supprimer le film",
+    "searchMovie": "Rechercher un film",
+    "noMovies": "Aucun film trouvé",
+    "year": "Année",
+    "director": "Réalisateur",
+    "genre": "Genre",
+    "rating": "Note",
+    "plot": "Synopsis"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "database": "Configuration de la base de données",
+    "tmdb": "Configuration API TMDB",
+    "language": "Langue",
+    "theme": "Thème",
+    "darkMode": "Mode sombre",
+    "lightMode": "Mode clair"
+  }
+}
