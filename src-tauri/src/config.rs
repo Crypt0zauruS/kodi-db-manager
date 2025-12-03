@@ -1,6 +1,6 @@
 use crate::models::AppConfig;
 use anyhow::Result;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 pub struct AppState {
     pub config: Mutex<AppConfig>,
@@ -22,7 +22,7 @@ pub fn load_config() -> Result<AppConfig> {
     Ok(AppConfig::default())
 }
 
-pub fn save_config(config: &AppConfig) -> Result<()> {
+pub fn save_config(_config: &AppConfig) -> Result<()> {
     // TODO: Implement with tauri-plugin-store
     Ok(())
 }

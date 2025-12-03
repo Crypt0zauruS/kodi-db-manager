@@ -5,7 +5,7 @@ use tauri::State;
 
 #[tauri::command]
 pub async fn get_movies(state: State<'_, AppState>) -> Result<Vec<Movie>, String> {
-    let pool_guard = state.db_pool.lock().unwrap();
+    let pool_guard = state.db_pool.lock().await;
     
     if let Some(pool) = pool_guard.as_ref() {
         database::get_movies(pool)
@@ -18,7 +18,7 @@ pub async fn get_movies(state: State<'_, AppState>) -> Result<Vec<Movie>, String
 
 #[tauri::command]
 pub async fn get_movie_by_id(id: i32, state: State<'_, AppState>) -> Result<Option<Movie>, String> {
-    let pool_guard = state.db_pool.lock().unwrap();
+    let pool_guard = state.db_pool.lock().await;
     
     if let Some(pool) = pool_guard.as_ref() {
         database::get_movie_by_id(pool, id)
@@ -31,7 +31,7 @@ pub async fn get_movie_by_id(id: i32, state: State<'_, AppState>) -> Result<Opti
 
 #[tauri::command]
 pub async fn search_movies(query: String, state: State<'_, AppState>) -> Result<Vec<Movie>, String> {
-    let pool_guard = state.db_pool.lock().unwrap();
+    let pool_guard = state.db_pool.lock().await;
     
     if let Some(pool) = pool_guard.as_ref() {
         database::search_movies(pool, &query)
@@ -54,11 +54,11 @@ pub async fn connect_database(config: DatabaseConfig, state: State<'_, AppState>
         .map_err(|e| e.to_string())?;
     
     // Store pool in state
-    let mut pool_guard = state.db_pool.lock().unwrap();
+    let mut pool_guard = state.db_pool.lock().await;
     *pool_guard = Some(pool);
     
     // Update config
-    let mut config_guard = state.config.lock().unwrap();
+    let mut config_guard = state.config.lock().await;
     config_guard.database = config;
     
     Ok(true)
@@ -66,7 +66,7 @@ pub async fn connect_database(config: DatabaseConfig, state: State<'_, AppState>
 
 #[tauri::command]
 pub async fn test_database_connection(state: State<'_, AppState>) -> Result<bool, String> {
-    let pool_guard = state.db_pool.lock().unwrap();
+    let pool_guard = state.db_pool.lock().await;
     
     if let Some(pool) = pool_guard.as_ref() {
         database::test_connection(pool)
@@ -78,14 +78,14 @@ pub async fn test_database_connection(state: State<'_, AppState>) -> Result<bool
 }
 
 #[tauri::command]
-pub fn get_config(state: State<'_, AppState>) -> Result<AppConfig, String> {
-    let config_guard = state.config.lock().unwrap();
+pub async fn get_config(state: State<'_, AppState>) -> Result<AppConfig, String> {
+    let config_guard = state.config.lock().await;
     Ok(config_guard.clone())
 }
 
 #[tauri::command]
-pub fn update_config(config: AppConfig, state: State<'_, AppState>) -> Result<(), String> {
-    let mut config_guard = state.config.lock().unwrap();
+pub async fn update_config(config: AppConfig, state: State<'_, AppState>) -> Result<(), String> {
+    let mut config_guard = state.config.lock().await;
     *config_guard = config;
     Ok(())
 }
