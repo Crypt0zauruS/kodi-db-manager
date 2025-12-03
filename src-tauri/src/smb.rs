@@ -2,9 +2,7 @@ use anyhow::{anyhow, Result};
 use local_ip_address::local_ip;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::net::Ipv4Addr;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,7 +222,7 @@ pub async fn test_smb_connection(
     password: Option<&str>,
     domain: Option<&str>,
 ) -> Result<bool> {
-    let mut args = vec![format!("//{}}/{}", host, share)];
+    let mut args = vec![format!("//{}/{}", host, share)];
 
     if let Some(user) = username {
         args.push("-U".to_string());
@@ -275,7 +273,7 @@ pub async fn mount_smb_share(
     tokio::fs::create_dir_all(mount_point).await?;
 
     let mut args = vec![
-        format!("//{}}/{}", host, share),
+        format!("//{}/{}", host, share),
         mount_point.to_string(),
     ];
 
